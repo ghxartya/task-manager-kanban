@@ -1,11 +1,13 @@
 import js from '@eslint/js'
-import globals from 'globals'
-import reactX from 'eslint-plugin-react-x'
+import betterTailwindcss from 'eslint-plugin-better-tailwindcss'
+import prettierPluginRecommended from 'eslint-plugin-prettier/recommended'
 import reactDom from 'eslint-plugin-react-dom'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
-import tseslint from 'typescript-eslint'
+import reactX from 'eslint-plugin-react-x'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -19,14 +21,27 @@ export default defineConfig([
       reactX.configs['recommended-typescript'],
       reactDom.configs.recommended,
       reactRefresh.configs.vite,
+      prettierPluginRecommended
     ],
+    plugins: {
+      'better-tailwindcss': betterTailwindcss
+    },
+    rules: {
+      ...betterTailwindcss.configs.recommended.rules,
+      'better-tailwindcss/enforce-consistent-class-order': 'off'
+    },
+    settings: {
+      'better-tailwindcss': {
+        entryPoint: './src/assets/styles/globals.css'
+      }
+    },
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
       parserOptions: {
         project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
-  },
+        tsconfigRootDir: import.meta.dirname
+      }
+    }
+  }
 ])
