@@ -1,4 +1,5 @@
 import js from '@eslint/js'
+import reactQuery from '@tanstack/eslint-plugin-query'
 import betterTailwindcss from 'eslint-plugin-better-tailwindcss'
 import prettierPluginRecommended from 'eslint-plugin-prettier/recommended'
 import reactDom from 'eslint-plugin-react-dom'
@@ -19,6 +20,7 @@ export default defineConfig([
       tseslint.configs.recommendedTypeChecked,
       reactHooks.configs['recommended-latest'],
       reactX.configs['recommended-typescript'],
+      reactQuery.configs['flat/recommended'],
       reactDom.configs.recommended,
       reactRefresh.configs.vite,
       prettierPluginRecommended
@@ -27,6 +29,7 @@ export default defineConfig([
       'better-tailwindcss': betterTailwindcss
     },
     rules: {
+      'prettier/prettier': 'off',
       ...betterTailwindcss.configs.recommended.rules,
       'better-tailwindcss/enforce-consistent-class-order': 'off'
     },
