@@ -1,3 +1,3 @@
 # Task Manager Kanban
 
-### App created by Vite using react-ts template flag.
+### The application has been created via Vite using the react-ts template flag and was downgraded to React 18.
