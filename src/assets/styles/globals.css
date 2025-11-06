@@ -1,3 +1,5 @@
+/* Make sure the stylelint + prettier task is configured correctly via .lintstagedrc */
+
 @import 'tailwindcss';
 
 :root {
