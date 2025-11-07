@@ -1,0 +1,8 @@
+{
+  "extends": ["stylelint-config-standard", "stylelint-config-tailwindcss"],
+  "plugins": ["stylelint-prettier"],
+  "rules": {
+    "prettier/prettier": null,
+    "value-keyword-case": null
+  }
+}
