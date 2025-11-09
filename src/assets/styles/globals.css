@@ -1,12 +1,45 @@
 @import 'tailwindcss';
 
+@plugin '#heroui-tw-plugin';
+
+@source '../../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
+
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme inline {
+  --height-header: var(--header);
+  --height-footer: var(--footer);
+  --spacing-header: var(--header);
+  --color-primary: var(--primary);
+}
+
+@layer base {
+  :root {
+    --header: 3rem;
+    --footer: 3rem;
+  }
+
+  html.light {
+    --primary: #242424;
+  }
+
+  html.dark {
+    --primary: #e5e5e5;
+  }
+}
+
 :root {
+  color: initial;
   font-synthesis: none;
+  background-color: initial;
   text-rendering: optimizeLegibility;
 }
 
 body {
-  overflow: hidden;
+  font-family: SFPro, sans-serif;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
