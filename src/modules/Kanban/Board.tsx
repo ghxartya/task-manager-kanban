@@ -1,8 +1,6 @@
-import { Flex } from '@chakra-ui/react'
 import {
   DndContext,
-  type DragOverEvent,
-  type DragStartEvent,
+  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
@@ -11,19 +9,19 @@ import {
 } from '@dnd-kit/core'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
 
 import { columns } from '@/config/columns'
 
-import { getTasksByStatus } from '@/utils/kanban'
+import { getTasksByColumn } from '@/utils/board'
 
-import type { ColumnId, Task } from '@/types/task'
+import type { Task } from '@/types/board'
 
-import Column from './Column'
+import List from './List'
 import { initialTasks } from '@/consts/task'
 
 export default function Board() {
   const queryClient = useQueryClient()
+
   const { data: tasks } = useQuery<Task[]>({
     queryKey: ['tasks'],
     queryFn: () => queryClient.getQueryData(['tasks']) ?? [],
@@ -48,14 +46,9 @@ export default function Board() {
     })
   )
 
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const tasksByColumn = getTasksByColumn(tasks)
 
-  const handleDragStart = (event: DragStartEvent) =>
-    setActiveId(event.active.id as string)
-
-  const tasksByStatus = getTasksByStatus(tasks)
-
-  const handleDragOver = (event: DragOverEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
 
     if (!over) return
@@ -63,88 +56,70 @@ export default function Board() {
     const activeId = active.id as string
     const overId = over.id as string
 
-    if (activeId === overId) return
-
-    const activeTask = tasks.find(({ id }) => id === activeId)
+    const activeTask = tasks.find(task => task.id === activeId)
     if (!activeTask) return
 
-    const isOverATask = tasks.some(({ id }) => id === overId)
-    const overStatus: ColumnId = isOverATask
-      ? tasks.find(({ id }) => id === overId)!.status
-      : (overId as ColumnId)
+    const activeColumn = activeTask.column
+    const overColumn =
+      tasks.find(task => task.id === overId)?.column ??
+      (overId as Task['column'])
 
-    const activeStatus = activeTask.status
+    if (activeColumn === overColumn) {
+      // Reorder within the same column
+      let columnTasks = tasks.filter(task => task.column === activeColumn)
+      const activeIndex = columnTasks.findIndex(task => task.id === activeId)
+      const overIndex = columnTasks.findIndex(task => task.id === overId)
 
-    let newTasks = [...tasks]
+      if (activeIndex === overIndex) return
 
-    if (activeStatus === overStatus) {
-      const oldIndex = tasksByStatus[activeStatus].findIndex(
-        ({ id }) => id === activeId
-      )
+      columnTasks = arrayMove(columnTasks, activeIndex, overIndex)
 
-      const newIndex = isOverATask
-        ? tasksByStatus[overStatus].findIndex(({ id }) => id === overId)
-        : tasksByStatus[overStatus].length
+      const otherTasks = tasks.filter(task => task.column !== activeColumn)
+      const newTasks = [...otherTasks, ...columnTasks]
 
-      if (oldIndex === newIndex) return
-
-      const newColumnTasks = arrayMove(
-        tasksByStatus[activeStatus],
-        oldIndex,
-        newIndex
-      )
-
-      newTasks = tasks
-        .filter(({ status }) => status !== activeStatus)
-        .concat(newColumnTasks)
+      updateTasks.mutate(newTasks)
     } else {
-      const oldIndex = tasksByStatus[activeStatus].findIndex(
-        ({ id }) => id === activeId
+      // Move to a different column
+      let overIndex: number
+      const destinationTasks = tasks.filter(task => task.column === overColumn)
+
+      if (overColumn === overId) overIndex = destinationTasks.length
+      else overIndex = destinationTasks.findIndex(task => task.id === overId)
+
+      const newActive: Task = { ...activeTask, column: overColumn }
+      const newDestinationTasks = [...destinationTasks]
+      newDestinationTasks.splice(overIndex, 0, newActive)
+
+      const sourceTasks = tasks.filter(
+        task => task.column === activeColumn && task.id !== activeId
+      )
+      const otherTasks = tasks.filter(
+        task => task.column !== activeColumn && task.column !== overColumn
       )
 
-      const newColumnTasks = [...tasksByStatus[overStatus]]
-      const newIndex = isOverATask
-        ? tasksByStatus[overStatus].findIndex(({ id }) => id === overId)
-        : tasksByStatus[overStatus].length
+      const newTasks = [...otherTasks, ...sourceTasks, ...newDestinationTasks]
 
-      newColumnTasks.splice(newIndex, 0, { ...activeTask, status: overStatus })
-
-      const remainingActiveTasks = [...tasksByStatus[activeStatus]]
-      remainingActiveTasks.splice(oldIndex, 1)
-
-      newTasks = tasks
-        .filter(
-          ({ status }) => status !== activeStatus && status !== overStatus
-        )
-        .concat(remainingActiveTasks)
-        .concat(newColumnTasks)
+      updateTasks.mutate(newTasks)
     }
-
-    updateTasks.mutate(newTasks)
   }
-
-  const handleDragEnd = () => setActiveId(null)
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      collisionDetection={closestCenter}
     >
-      <Flex h={'vh'} pt={12}>
+      <div className='flex'>
         {columns.map(column => (
-          <Column
+          <List
             key={column.id}
             column={column}
-            tasks={tasksByStatus[column.id]}
+            tasks={tasksByColumn[column.id]}
             allTasks={tasks}
-            activeId={activeId}
             updateTasks={newTasks => updateTasks.mutate(newTasks)}
           />
         ))}
-      </Flex>
+      </div>
     </DndContext>
   )
 }

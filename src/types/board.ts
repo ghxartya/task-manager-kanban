@@ -1,6 +1,7 @@
-import type { columns } from '@/config/columns'
-
-export type ColumnId = (typeof columns)[number]['id']
+export interface Column {
+  id: 'todo' | 'in-progress' | 'done'
+  title: string
+}
 
 export interface Task {
   id: string
@@ -8,5 +9,5 @@ export interface Task {
   description: string
   priority: 'low' | 'medium' | 'high'
   term: string
-  status: ColumnId
+  column: Column['id']
 }
