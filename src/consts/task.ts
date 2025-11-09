@@ -1,4 +1,4 @@
-import type { Task } from '@/types/task'
+import type { Task } from '@/types/board'
 
 export const initialTasks: Task[] = [
   {
@@ -7,7 +7,7 @@ export const initialTasks: Task[] = [
     description: 'Опис',
     priority: 'low',
     term: '11.11.2025',
-    status: 'todo'
+    column: 'todo'
   },
   {
     id: '2',
@@ -15,7 +15,7 @@ export const initialTasks: Task[] = [
     description: 'Опис',
     priority: 'medium',
     term: '11.11.2025',
-    status: 'todo'
+    column: 'todo'
   },
   {
     id: '3',
@@ -23,7 +23,7 @@ export const initialTasks: Task[] = [
     description: 'Опис',
     priority: 'high',
     term: '11.11.2025',
-    status: 'in_progress'
+    column: 'in-progress'
   },
   {
     id: '4',
@@ -31,6 +31,6 @@ export const initialTasks: Task[] = [
     description: 'Опис',
     priority: 'low',
     term: '11.11.2025',
-    status: 'done'
+    column: 'done'
   }
 ]

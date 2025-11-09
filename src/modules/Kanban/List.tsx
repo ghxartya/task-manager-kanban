@@ -1,32 +1,26 @@
-import { Box, Heading } from '@chakra-ui/react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import clsx from 'clsx'
 
-import Card from '@/modules/Task/Card'
+import Item from '@/modules/Task/Item'
 
-import type { Task } from '@/types/task'
+import type { Column, Task } from '@/types/board'
 
-interface Column {
-  id: string
-  title: string
-}
+import Text from '@/ui/text/Text'
 
-interface ColumnProps {
-  column: Column
+interface ListProps {
   tasks: Task[]
+  column: Column
   allTasks: Task[]
-  activeId: string | null
   updateTasks: (newTasks: Task[]) => void
 }
 
-export default function Column({
-  column,
+export default function List({
   tasks,
+  column,
   allTasks,
-  activeId,
   updateTasks
-}: ColumnProps) {
+}: ListProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id
   })
@@ -37,31 +31,29 @@ export default function Column({
   }
 
   return (
-    <Box w='full'>
-      <Heading my={4} size='md' textAlign='center'>
+    <div className='w-full'>
+      <Text size='large' weight={700} className='my-4 text-center'>
         {column.title}
-      </Heading>
-      <Box
+      </Text>
+      <div
         ref={setNodeRef}
-        minH='200px'
-        p={2}
-        rounded='sm'
-        className={clsx({ 'bg-blue-300': isOver })}
+        className={clsx('min-h-[200px] rounded-sm p-2', {
+          'bg-blue-200 dark:bg-blue-300': isOver
+        })}
       >
         <SortableContext
           items={tasks.map(task => task.id)}
           strategy={verticalListSortingStrategy}
         >
           {tasks.map(task => (
-            <Card
+            <Item
               key={task.id}
               task={task}
               onDelete={() => handleDelete(task.id)}
-              activeId={activeId}
             />
           ))}
         </SortableContext>
-      </Box>
-    </Box>
+      </div>
+    </div>
   )
 }
