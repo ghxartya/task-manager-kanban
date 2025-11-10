@@ -11,6 +11,8 @@
   --height-footer: var(--footer);
   --spacing-header: var(--header);
   --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-background: var(--background);
 }
 
 @layer base {
@@ -20,19 +22,23 @@
   }
 
   html.light {
-    --primary: #242424;
+    --primary: #222324;
+    --secondary: #e7e7eb;
+    --background: #f7f7f7;
   }
 
   html.dark {
     --primary: #e5e5e5;
+    --secondary: #171717;
+    --background: #121212;
   }
 }
 
 :root {
-  color: initial;
   font-synthesis: none;
-  background-color: initial;
+  color: var(--color-primary);
   text-rendering: optimizeLegibility;
+  background-color: var(--color-background);
 }
 
 body {
