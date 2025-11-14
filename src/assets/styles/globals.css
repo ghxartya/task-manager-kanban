@@ -36,6 +36,7 @@
 }
 
 :root {
+  color: initial;
   font-synthesis: none;
   color: var(--color-primary);
   text-rendering: optimizeLegibility;
