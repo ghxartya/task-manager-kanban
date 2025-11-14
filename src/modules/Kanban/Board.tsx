@@ -1,18 +1,29 @@
 import {
   DndContext,
-  type DragEndEvent,
+  type DragOverEvent,
+  DragOverlay,
+  type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
-  closestCenter,
+  pointerWithin,
   useSensor,
   useSensors
 } from '@dnd-kit/core'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
+
+import Item from '@/modules/Task/Item'
 
 import { columns } from '@/config/columns'
 
-import { getTasksByColumn } from '@/utils/board'
+import { useStore } from '@/store'
+
+import {
+  findColumnId,
+  getActiveTask,
+  getTasksByColumn,
+  isTasksEqual
+} from '@/utils/board'
 
 import type { Task } from '@/types/board'
 
@@ -20,25 +31,22 @@ import List from './List'
 import { initialTasks } from '@/consts/task'
 
 export default function Board() {
-  const queryClient = useQueryClient()
+  const [tasks, setTasks] = useState(initialTasks)
+  const [activeId, setActiveId] = useState<Task['id']>('')
 
-  const { data: tasks } = useQuery<Task[]>({
-    queryKey: ['tasks'],
-    queryFn: () => queryClient.getQueryData(['tasks']) ?? [],
-    initialData: initialTasks
-  })
+  const prevTasksRef = useRef(tasks)
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
-  const updateTasks = useMutation({
-    mutationFn: (newTasks: Task[]) => {
-      queryClient.setQueryData(['tasks'], newTasks)
-      return Promise.resolve(newTasks)
-    }
-  })
+  const [activeTask, setActiveTask] = useState<Task | undefined>()
+  const [tasksByColumn, setTasksByColumn] = useState(() =>
+    getTasksByColumn(tasks)
+  )
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8
+        delay: 50,
+        tolerance: 5
       }
     }),
     useSensor(KeyboardSensor, {
@@ -46,80 +54,113 @@ export default function Board() {
     })
   )
 
-  const tasksByColumn = getTasksByColumn(tasks)
+  useEffect(() => setTasksByColumn(getTasksByColumn(tasks)), [tasks])
+  useEffect(() => {
+    if (activeId) setActiveTask(getActiveTask(tasks, activeId))
+  }, [activeId])
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
+  const { overColumn, setOverColumn } = useStore()
 
+  const handleDragStart = (event: DragStartEvent) =>
+    setActiveId(event.active.id)
+
+  const scheduleUpdate = (newTasks: Task[]) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      if (!isTasksEqual(newTasks, prevTasksRef.current)) {
+        prevTasksRef.current = newTasks
+        setTasks(newTasks)
+      }
+    }, 10)
+  }
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over, delta } = event
     if (!over) return
 
-    const activeId = active.id as string
-    const overId = over.id as string
+    const activeId = active.id
+    const overId = over.id
 
-    const activeTask = tasks.find(task => task.id === activeId)
-    if (!activeTask) return
+    const activeCol = findColumnId(tasks, activeId)
+    const overCol = findColumnId(tasks, overId)
 
-    const activeColumn = activeTask.column
-    const overColumn =
-      tasks.find(task => task.id === overId)?.column ??
-      (overId as Task['column'])
+    if (!activeCol || !overCol) return
+    const sameColumn = activeCol === overCol
 
-    if (activeColumn === overColumn) {
-      // Reorder within the same column
-      let columnTasks = tasks.filter(task => task.column === activeColumn)
-      const activeIndex = columnTasks.findIndex(task => task.id === activeId)
-      const overIndex = columnTasks.findIndex(task => task.id === overId)
+    let nextTasks = tasks
+    setOverColumn(overCol)
 
-      if (activeIndex === overIndex) return
+    if (!sameColumn) {
+      const dragged = tasks.find(t => t.id === activeId)
+      if (!dragged) return
 
-      columnTasks = arrayMove(columnTasks, activeIndex, overIndex)
+      const withoutDragged = tasks.filter(t => t.id !== activeId)
+      const moved = { ...dragged, column: overCol }
 
-      const otherTasks = tasks.filter(task => task.column !== activeColumn)
-      const newTasks = [...otherTasks, ...columnTasks]
+      if (overId === overCol) nextTasks = [...withoutDragged, moved]
+      else {
+        const overIdx = withoutDragged.findIndex(t => t.id === overId)
+        if (overIdx === -1) return
 
-      updateTasks.mutate(newTasks)
-    } else {
-      // Move to a different column
-      let overIndex: number
-      const destinationTasks = tasks.filter(task => task.column === overColumn)
+        const insertOffset = delta.y > 0 ? 1 : 0
+        nextTasks = [
+          ...withoutDragged.slice(0, overIdx + insertOffset),
+          moved,
+          ...withoutDragged.slice(overIdx + insertOffset)
+        ]
+      }
+    } else if (activeId !== overId) {
+      const columnTasks = tasksByColumn[activeCol]
+      const oldIdx = columnTasks.findIndex(t => t.id === activeId)
+      const newIdx = columnTasks.findIndex(t => t.id === overId)
 
-      if (overColumn === overId) overIndex = destinationTasks.length
-      else overIndex = destinationTasks.findIndex(task => task.id === overId)
-
-      const newActive: Task = { ...activeTask, column: overColumn }
-      const newDestinationTasks = [...destinationTasks]
-      newDestinationTasks.splice(overIndex, 0, newActive)
-
-      const sourceTasks = tasks.filter(
-        task => task.column === activeColumn && task.id !== activeId
-      )
-      const otherTasks = tasks.filter(
-        task => task.column !== activeColumn && task.column !== overColumn
-      )
-
-      const newTasks = [...otherTasks, ...sourceTasks, ...newDestinationTasks]
-
-      updateTasks.mutate(newTasks)
+      if (oldIdx !== -1 && newIdx !== -1) {
+        const other = tasks.filter(t => t.column !== activeCol)
+        const reordered = arrayMove(columnTasks, oldIdx, newIdx)
+        nextTasks = [...other, ...reordered]
+      }
     }
+
+    scheduleUpdate(nextTasks)
+  }
+
+  const cleanUp = () => {
+    setActiveId('')
+    if (overColumn) setOverColumn(null)
   }
 
   return (
     <DndContext
       sensors={sensors}
-      onDragEnd={handleDragEnd}
-      collisionDetection={closestCenter}
+      collisionDetection={pointerWithin}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragCancel={cleanUp}
+      onDragEnd={cleanUp}
     >
-      <div className='flex'>
-        {columns.map(column => (
-          <List
-            key={column.id}
-            column={column}
-            tasks={tasksByColumn[column.id]}
-            allTasks={tasks}
-            updateTasks={newTasks => updateTasks.mutate(newTasks)}
+      {columns.map(column => (
+        <List
+          key={column.id}
+          column={column}
+          allTasks={tasks}
+          updateTasks={setTasks}
+          tasks={tasksByColumn[column.id]}
+        />
+      ))}
+      <DragOverlay
+        dropAnimation={{
+          duration: 150,
+          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)'
+        }}
+      >
+        {activeTask && (
+          <Item
+            task={activeTask}
+            onDelete={() => null}
+            className='backdrop-blur-sm'
           />
-        ))}
-      </div>
+        )}
+      </DragOverlay>
     </DndContext>
   )
 }

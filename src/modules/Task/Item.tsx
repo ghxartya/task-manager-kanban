@@ -12,22 +12,25 @@ import Text from '@/ui/text/Text'
 
 interface ItemProps {
   task: Task
+  className?: string
   onDelete: () => void
 }
 
-export default function Item({ task, onDelete }: ItemProps) {
+export default function Item({ task, className, onDelete }: ItemProps) {
   const {
     listeners,
     transform,
     transition,
     setNodeRef,
     attributes,
-    isDragging
+    isDragging,
+    isOver,
+    active
   } = useSortable({ id: task.id })
 
   const style = {
-    transform: CSS.Transform.toString(transform),
     transition,
+    transform: CSS.Transform.toString(transform),
     opacity: isDragging ? 0.5 : 1
   }
 
@@ -37,11 +40,17 @@ export default function Item({ task, onDelete }: ItemProps) {
       {...listeners}
       {...attributes}
       ref={setNodeRef}
-      className={clsx('mb-4 cursor-grab rounded-sm p-4 shadow-lg', {
-        'bg-red-300 dark:bg-red-900/50': task.priority === 'high',
-        'bg-green-200 dark:bg-green-900/50': task.priority === 'low',
-        'bg-yellow-100 dark:bg-yellow-900/50': task.priority === 'medium'
-      })}
+      className={clsx(
+        'cursor-grab touch-none rounded-sm p-4 shadow-lg not-last:mb-4',
+        {
+          'bg-red-300 dark:bg-red-900/50': task.priority === 'high',
+          'bg-green-200 dark:bg-green-900/50': task.priority === 'low',
+          'bg-yellow-100 dark:bg-yellow-900/50': task.priority === 'medium',
+          'outline-2 outline-blue-500':
+            isOver && active && active.id === task.id
+        },
+        className
+      )}
     >
       <div className='flex items-start justify-between'>
         <div>
