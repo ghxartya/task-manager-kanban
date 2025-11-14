@@ -1,8 +1,11 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import clsx from 'clsx'
+import { TbDragDrop2 } from 'react-icons/tb'
 
 import Item from '@/modules/Task/Item'
+
+import { useStore } from '@/store'
 
 import type { Column, Task } from '@/types/board'
 
@@ -21,39 +24,44 @@ export default function List({
   allTasks,
   updateTasks
 }: ListProps) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: column.id
-  })
+  const { id, title } = column
+  const { isOver, setNodeRef } = useDroppable({ id })
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: Task['id']) => {
     const updatedTasks = allTasks.filter(task => task.id !== id)
     updateTasks(updatedTasks)
   }
 
+  const { overColumn } = useStore()
+
   return (
-    <div className='w-full'>
+    <div
+      ref={setNodeRef}
+      className={clsx('h-full rounded-b-sm px-2 pb-2', {
+        'bg-blue-200/50 dark:bg-blue-400/10': isOver || overColumn === id
+      })}
+    >
       <Text size='large' weight={700} className='my-4 text-center'>
-        {column.title}
+        {title}
       </Text>
-      <div
-        ref={setNodeRef}
-        className={clsx('min-h-[200px] rounded-sm p-2', {
-          'bg-blue-200 dark:bg-blue-300': isOver
-        })}
+      <SortableContext
+        items={tasks.map(task => task.id)}
+        strategy={verticalListSortingStrategy}
       >
-        <SortableContext
-          items={tasks.map(task => task.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {tasks.map(task => (
+        {tasks.length ? (
+          tasks.map(task => (
             <Item
               key={task.id}
               task={task}
               onDelete={() => handleDelete(task.id)}
             />
-          ))}
-        </SortableContext>
-      </div>
+          ))
+        ) : (
+          <div className='border-primary bg-secondary flex h-32 items-center justify-center rounded-md border border-dashed'>
+            <TbDragDrop2 size={25} className='text-primary' />
+          </div>
+        )}
+      </SortableContext>
     </div>
   )
 }
