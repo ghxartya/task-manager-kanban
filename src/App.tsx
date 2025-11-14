@@ -1,14 +1,18 @@
+import { Fragment } from 'react'
+
+import Board from '@/modules/Kanban/Board'
+
+import Footer from '@/layout/footer/Footer'
 import Header from '@/layout/header/Header'
 
-import Board from './modules/Kanban/Board'
-
-function App() {
+export default function App() {
   return (
-    <>
+    <Fragment>
       <Header />
-      <Board />
-    </>
+      <main className='pt-header h-screen'>
+        <Board />
+      </main>
+      <Footer />
+    </Fragment>
   )
 }
-
-export default App
