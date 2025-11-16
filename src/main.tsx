@@ -12,7 +12,7 @@ import App from './App.tsx'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ReactQueryProvider>
-      <HeroProvider>
+      <HeroProvider locale='uk-UA'>
         <App />
       </HeroProvider>
     </ReactQueryProvider>

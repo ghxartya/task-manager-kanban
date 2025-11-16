@@ -25,19 +25,18 @@ import {
   isTasksEqual
 } from '@/utils/board'
 
-import type { Task } from '@/types/board'
+import type { Column, Task } from '@/types/board'
 
 import List from './List'
-import { initialTasks } from '@/consts/task'
 
 export default function Board() {
-  const [tasks, setTasks] = useState(initialTasks)
+  const { tasks, setTasks } = useStore()
   const [activeId, setActiveId] = useState<Task['id']>('')
 
   const prevTasksRef = useRef(tasks)
-  const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const debounceRef = useRef<NodeJS.Timeout>()
 
-  const [activeTask, setActiveTask] = useState<Task | undefined>()
+  const [activeTask, setActiveTask] = useState<Task>()
   const [tasksByColumn, setTasksByColumn] = useState(() =>
     getTasksByColumn(tasks)
   )
@@ -59,8 +58,6 @@ export default function Board() {
     if (activeId) setActiveTask(getActiveTask(tasks, activeId))
   }, [activeId])
 
-  const { overColumn, setOverColumn } = useStore()
-
   const handleDragStart = (event: DragStartEvent) =>
     setActiveId(event.active.id)
 
@@ -73,6 +70,8 @@ export default function Board() {
       }
     }, 10)
   }
+
+  const [overColumn, setOverColumn] = useState<Column['id']>()
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over, delta } = event
@@ -126,7 +125,7 @@ export default function Board() {
 
   const cleanUp = () => {
     setActiveId('')
-    if (overColumn) setOverColumn(null)
+    if (overColumn) setOverColumn(undefined)
   }
 
   return (
@@ -142,8 +141,7 @@ export default function Board() {
         <List
           key={column.id}
           column={column}
-          allTasks={tasks}
-          updateTasks={setTasks}
+          overColumn={overColumn}
           tasks={tasksByColumn[column.id]}
         />
       ))}
@@ -156,6 +154,7 @@ export default function Board() {
         {activeTask && (
           <Item
             task={activeTask}
+            onEdit={() => null}
             onDelete={() => null}
             className='backdrop-blur-sm'
           />

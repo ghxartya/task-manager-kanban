@@ -14,11 +14,12 @@
   --color-primary: var(--primary);
   --color-secondary: var(--secondary);
   --color-background: var(--background);
+  --transition-property-transform-opacity: transform, scale, opacity, rotate;
 }
 
 @layer base {
   :root {
-    --header: 3rem;
+    --header: 3.25rem;
     --footer: 3rem;
   }
 
@@ -46,7 +47,8 @@ body {
   font-family: SFPro, sans-serif;
   overflow-x: hidden;
 
-  &::-webkit-scrollbar {
+  &::-webkit-scrollbar,
+  textarea::-webkit-scrollbar {
     display: none;
   }
 }

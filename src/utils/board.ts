@@ -28,14 +28,3 @@ export const getTasksByColumn = (tasks: Task[]) => {
     {} as Record<Column['id'], Task[]>
   )
 }
-
-export const getTaskPriorityText = (task: Task) => {
-  switch (task.priority) {
-    case 'low':
-      return 'низький'
-    case 'medium':
-      return 'середній'
-    case 'high':
-      return 'високий'
-  }
-}

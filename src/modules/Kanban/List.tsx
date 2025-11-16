@@ -14,34 +14,26 @@ import Text from '@/ui/text/Text'
 interface ListProps {
   tasks: Task[]
   column: Column
-  allTasks: Task[]
-  updateTasks: (newTasks: Task[]) => void
+  overColumn: Column['id'] | undefined
 }
 
-export default function List({
-  tasks,
-  column,
-  allTasks,
-  updateTasks
-}: ListProps) {
+export default function List({ tasks, column, overColumn }: ListProps) {
   const { id, title } = column
+
+  const { setEditingTask, deleteTask } = useStore()
   const { isOver, setNodeRef } = useDroppable({ id })
 
-  const handleDelete = (id: Task['id']) => {
-    const updatedTasks = allTasks.filter(task => task.id !== id)
-    updateTasks(updatedTasks)
-  }
-
-  const { overColumn } = useStore()
+  const handleEdit = (task: Task) => setEditingTask(task)
+  const handleDelete = (taskId: Task['id']) => deleteTask(taskId)
 
   return (
     <div
       ref={setNodeRef}
-      className={clsx('h-full rounded-b-sm px-2 pb-2', {
+      className={clsx('h-full rounded-b-sm px-3.75 pb-3.75', {
         'bg-blue-200/50 dark:bg-blue-400/10': isOver || overColumn === id
       })}
     >
-      <Text size='large' weight={700} className='my-4 text-center'>
+      <Text size='large' weight={700} className='my-3.75 text-center'>
         {title}
       </Text>
       <SortableContext
@@ -53,11 +45,12 @@ export default function List({
             <Item
               key={task.id}
               task={task}
+              onEdit={() => handleEdit(task)}
               onDelete={() => handleDelete(task.id)}
             />
           ))
         ) : (
-          <div className='border-primary bg-secondary flex h-32 items-center justify-center rounded-md border border-dashed'>
+          <div className='border-primary bg-secondary flex h-41 items-center justify-center rounded-md border border-dashed'>
             <TbDragDrop2 size={25} className='text-primary' />
           </div>
         )}
