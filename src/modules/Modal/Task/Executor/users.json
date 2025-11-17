@@ -1,0 +1,122 @@
+[
+  {
+    "id": 1,
+    "name": "Тоні Райхерт",
+    "email": "tony.reichert@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/male/1.png"
+  },
+  {
+    "id": 2,
+    "name": "Зої Ленг",
+    "email": "zoey.lang@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/female/1.png"
+  },
+  {
+    "id": 3,
+    "name": "Джейн Фішер",
+    "email": "jane.fisher@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/female/2.png"
+  },
+  {
+    "id": 4,
+    "name": "Вільям Говард",
+    "email": "william.howard@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/male/2.png"
+  },
+  {
+    "id": 5,
+    "name": "Крістен Купер",
+    "email": "kristen.cooper@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/female/3.png"
+  },
+  {
+    "id": 6,
+    "name": "Браян Кім",
+    "email": "brian.kim@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/male/3.png"
+  },
+  {
+    "id": 7,
+    "name": "Майкл Гант",
+    "email": "michael.hunt@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/male/4.png"
+  },
+  {
+    "id": 8,
+    "name": "Саманта Брукс",
+    "email": "samantha.brooks@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/female/4.png"
+  },
+  {
+    "id": 9,
+    "name": "Френк Гаррісон",
+    "email": "frank.harrison@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/male/5.png"
+  },
+  {
+    "id": 10,
+    "name": "Емма Адамс",
+    "email": "emma.adams@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/female/5.png"
+  },
+  {
+    "id": 11,
+    "name": "Брендон Стівенс",
+    "email": "brandon.stevens@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/male/7.png"
+  },
+  {
+    "id": 12,
+    "name": "Меган Річардс",
+    "email": "megan.richards@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/female/7.png"
+  },
+  {
+    "id": 13,
+    "name": "Олівер Скотт",
+    "email": "oliver.scott@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/male/8.png"
+  },
+  {
+    "id": 14,
+    "name": "Грейс Аллен",
+    "email": "grace.allen@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/female/8.png"
+  },
+  {
+    "id": 15,
+    "name": "Ноа Картер",
+    "email": "noah.carter@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/male/9.png"
+  },
+  {
+    "id": 16,
+    "name": "Ава Перез",
+    "email": "ava.perez@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/female/9.png"
+  },
+  {
+    "id": 17,
+    "name": "Ліам Джонсон",
+    "email": "liam.johnson@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/male/11.png"
+  },
+  {
+    "id": 18,
+    "name": "Софія Тейлор",
+    "email": "sophia.taylor@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/female/11.png"
+  },
+  {
+    "id": 19,
+    "name": "Лукас Гарріс",
+    "email": "lucas.harris@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/male/12.png"
+  },
+  {
+    "id": 20,
+    "name": "Мія Робінсон",
+    "email": "mia.robinson@example.com",
+    "avatar": "https://d2u8k2ocievbld.cloudfront.net/memojis/female/12.png"
+  }
+]

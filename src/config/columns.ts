@@ -1,5 +1,7 @@
-export const columns = [
+import type { Column } from '@/types/board'
+
+export const columns: Column[] = [
   { id: 'todo', title: 'Todo' },
-  { id: 'in_progress', title: 'In Progress' },
+  { id: 'in-progress', title: 'In Progress' },
   { id: 'done', title: 'Done' }
 ] as const

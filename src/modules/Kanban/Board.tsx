@@ -1,46 +1,51 @@
-import { Flex } from '@chakra-ui/react'
 import {
   DndContext,
   type DragOverEvent,
+  DragOverlay,
   type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
-  closestCenter,
+  pointerWithin,
   useSensor,
   useSensors
 } from '@dnd-kit/core'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+
+import Item from '@/modules/Task/Item'
 
 import { columns } from '@/config/columns'
 
-import { getTasksByStatus } from '@/utils/kanban'
+import { useStore } from '@/store'
 
-import type { ColumnId, Task } from '@/types/task'
+import {
+  findColumnId,
+  getActiveTask,
+  getTasksByColumn,
+  isTasksEqual
+} from '@/utils/board'
 
-import Column from './Column'
-import { initialTasks } from '@/consts/task'
+import type { Column, Task } from '@/types/board'
+
+import List from './List'
 
 export default function Board() {
-  const queryClient = useQueryClient()
-  const { data: tasks } = useQuery<Task[]>({
-    queryKey: ['tasks'],
-    queryFn: () => queryClient.getQueryData(['tasks']) ?? [],
-    initialData: initialTasks
-  })
+  const { tasks, setTasks } = useStore()
+  const [activeId, setActiveId] = useState<Task['id']>('')
 
-  const updateTasks = useMutation({
-    mutationFn: (newTasks: Task[]) => {
-      queryClient.setQueryData(['tasks'], newTasks)
-      return Promise.resolve(newTasks)
-    }
-  })
+  const prevTasksRef = useRef(tasks)
+  const debounceRef = useRef<NodeJS.Timeout>()
+
+  const [activeTask, setActiveTask] = useState<Task>()
+  const [tasksByColumn, setTasksByColumn] = useState(() =>
+    getTasksByColumn(tasks)
+  )
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8
+        delay: 50,
+        tolerance: 5
       }
     }),
     useSensor(KeyboardSensor, {
@@ -48,103 +53,113 @@ export default function Board() {
     })
   )
 
-  const [activeId, setActiveId] = useState<string | null>(null)
+  useEffect(() => setTasksByColumn(getTasksByColumn(tasks)), [tasks])
+  useEffect(() => {
+    if (activeId) setActiveTask(getActiveTask(tasks, activeId))
+  }, [activeId])
 
   const handleDragStart = (event: DragStartEvent) =>
-    setActiveId(event.active.id as string)
+    setActiveId(event.active.id)
 
-  const tasksByStatus = getTasksByStatus(tasks)
-
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event
-
-    if (!over) return
-
-    const activeId = active.id as string
-    const overId = over.id as string
-
-    if (activeId === overId) return
-
-    const activeTask = tasks.find(({ id }) => id === activeId)
-    if (!activeTask) return
-
-    const isOverATask = tasks.some(({ id }) => id === overId)
-    const overStatus: ColumnId = isOverATask
-      ? tasks.find(({ id }) => id === overId)!.status
-      : (overId as ColumnId)
-
-    const activeStatus = activeTask.status
-
-    let newTasks = [...tasks]
-
-    if (activeStatus === overStatus) {
-      const oldIndex = tasksByStatus[activeStatus].findIndex(
-        ({ id }) => id === activeId
-      )
-
-      const newIndex = isOverATask
-        ? tasksByStatus[overStatus].findIndex(({ id }) => id === overId)
-        : tasksByStatus[overStatus].length
-
-      if (oldIndex === newIndex) return
-
-      const newColumnTasks = arrayMove(
-        tasksByStatus[activeStatus],
-        oldIndex,
-        newIndex
-      )
-
-      newTasks = tasks
-        .filter(({ status }) => status !== activeStatus)
-        .concat(newColumnTasks)
-    } else {
-      const oldIndex = tasksByStatus[activeStatus].findIndex(
-        ({ id }) => id === activeId
-      )
-
-      const newColumnTasks = [...tasksByStatus[overStatus]]
-      const newIndex = isOverATask
-        ? tasksByStatus[overStatus].findIndex(({ id }) => id === overId)
-        : tasksByStatus[overStatus].length
-
-      newColumnTasks.splice(newIndex, 0, { ...activeTask, status: overStatus })
-
-      const remainingActiveTasks = [...tasksByStatus[activeStatus]]
-      remainingActiveTasks.splice(oldIndex, 1)
-
-      newTasks = tasks
-        .filter(
-          ({ status }) => status !== activeStatus && status !== overStatus
-        )
-        .concat(remainingActiveTasks)
-        .concat(newColumnTasks)
-    }
-
-    updateTasks.mutate(newTasks)
+  const scheduleUpdate = (newTasks: Task[]) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      if (!isTasksEqual(newTasks, prevTasksRef.current)) {
+        prevTasksRef.current = newTasks
+        setTasks(newTasks)
+      }
+    }, 10)
   }
 
-  const handleDragEnd = () => setActiveId(null)
+  const [overColumn, setOverColumn] = useState<Column['id']>()
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over, delta } = event
+    if (!over) return
+
+    const activeId = active.id
+    const overId = over.id
+
+    const activeCol = findColumnId(tasks, activeId)
+    const overCol = findColumnId(tasks, overId)
+
+    if (!activeCol || !overCol) return
+    const sameColumn = activeCol === overCol
+
+    let nextTasks = tasks
+    setOverColumn(overCol)
+
+    if (!sameColumn) {
+      const dragged = tasks.find(t => t.id === activeId)
+      if (!dragged) return
+
+      const withoutDragged = tasks.filter(t => t.id !== activeId)
+      const moved = { ...dragged, column: overCol }
+
+      if (overId === overCol) nextTasks = [...withoutDragged, moved]
+      else {
+        const overIdx = withoutDragged.findIndex(t => t.id === overId)
+        if (overIdx === -1) return
+
+        const insertOffset = delta.y > 0 ? 1 : 0
+        nextTasks = [
+          ...withoutDragged.slice(0, overIdx + insertOffset),
+          moved,
+          ...withoutDragged.slice(overIdx + insertOffset)
+        ]
+      }
+    } else if (activeId !== overId) {
+      const columnTasks = tasksByColumn[activeCol]
+      const oldIdx = columnTasks.findIndex(t => t.id === activeId)
+      const newIdx = columnTasks.findIndex(t => t.id === overId)
+
+      if (oldIdx !== -1 && newIdx !== -1) {
+        const other = tasks.filter(t => t.column !== activeCol)
+        const reordered = arrayMove(columnTasks, oldIdx, newIdx)
+        nextTasks = [...other, ...reordered]
+      }
+    }
+
+    scheduleUpdate(nextTasks)
+  }
+
+  const cleanUp = () => {
+    setActiveId('')
+    if (overColumn) setOverColumn(undefined)
+  }
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
+      onDragCancel={cleanUp}
+      onDragEnd={cleanUp}
     >
-      <Flex h={'vh'} pt={12}>
-        {columns.map(column => (
-          <Column
-            key={column.id}
-            column={column}
-            tasks={tasksByStatus[column.id]}
-            allTasks={tasks}
-            activeId={activeId}
-            updateTasks={newTasks => updateTasks.mutate(newTasks)}
+      {columns.map(column => (
+        <List
+          key={column.id}
+          column={column}
+          overColumn={overColumn}
+          tasks={tasksByColumn[column.id]}
+        />
+      ))}
+      <DragOverlay
+        dropAnimation={{
+          duration: 150,
+          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)'
+        }}
+      >
+        {activeTask && (
+          <Item
+            task={activeTask}
+            onEdit={() => null}
+            onDelete={() => null}
+            className='backdrop-blur-sm'
           />
-        ))}
-      </Flex>
+        )}
+      </DragOverlay>
     </DndContext>
   )
 }
