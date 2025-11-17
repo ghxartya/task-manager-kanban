@@ -14,10 +14,21 @@ import {
   useDisclosure
 } from '@heroui/react'
 import { ZonedDateTime, now, parseZonedDateTime } from '@internationalized/date'
+import { useMutation } from '@tanstack/react-query'
+import type { AxiosError } from 'axios'
 import { Fragment, useEffect, useState } from 'react'
-import { Controller, type SubmitHandler, useForm } from 'react-hook-form'
+import {
+  Controller,
+  type SubmitHandler,
+  useForm,
+  useWatch
+} from 'react-hook-form'
 import { IoMdAddCircle } from 'react-icons/io'
+import { LuTrash } from 'react-icons/lu'
 
+import { CloudinaryService } from '@/services/cloudinary'
+
+import { PRIORITY } from '@/consts/priority'
 import { VALIDATION } from '@/consts/validation'
 
 import { useStore } from '@/store'
@@ -26,8 +37,13 @@ import { normalizeWhitespace } from '@/utils/normalize'
 
 import type { Task } from '@/types/board'
 
-interface FormData extends Omit<Task, 'id' | 'term'> {
+import File from '@/ui/file/File'
+
+type FormTask = Omit<Task, 'id'>
+
+interface FormData extends Omit<FormTask, 'term' | 'file'> {
   term: ZonedDateTime
+  file?: File
 }
 
 export default function TaskModal() {
@@ -38,19 +54,44 @@ export default function TaskModal() {
     mode: 'all'
   })
 
-  const onSubmit: SubmitHandler<FormData> = newTask => {
-    const id = editingTask
-      ? editingTask.id
-      : tasks.length
-        ? Math.max(...tasks.map(task => Number(task.id))) + 1
-        : 1
+  const [serverErrors, setServerErrors] = useState({ file: '' })
+  const [removeExistingFile, setRemoveExistingFile] = useState(false)
 
-    const term = newTask.term.toString()
-    if (editingTask) updateTask({ id, ...newTask, term })
-    else addTask({ id, ...newTask, term })
-    onClose()
-  }
+  const { mutate: submit, isPending } = useMutation<
+    FormTask,
+    AxiosError,
+    FormData
+  >({
+    mutationFn: async newTask => {
+      let file: Task['file']
 
+      if (editingTask) {
+        file = editingTask.file
+        if (removeExistingFile) file = undefined
+      }
+
+      if (newTask.file) {
+        const { data } = await CloudinaryService.uploadFile(newTask.file)
+        file = data.secure_url
+      }
+
+      return { ...newTask, term: newTask.term.toString(), file }
+    },
+    onSuccess: task => {
+      const id = editingTask
+        ? editingTask.id
+        : tasks.length
+          ? Math.max(...tasks.map(task => Number(task.id))) + 1
+          : 1
+
+      if (editingTask) updateTask({ id, ...task })
+      else addTask({ id, ...task })
+      onClose()
+    },
+    onError: () => setServerErrors({ file: 'Помилка завантаження файлу' })
+  })
+
+  const onSubmit: SubmitHandler<FormData> = newTask => submit(newTask)
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
@@ -85,8 +126,35 @@ export default function TaskModal() {
   }, [editingTask])
 
   useEffect(() => {
-    if (!isOpen && editingTask) setEditingTask(null)
+    if (!isOpen && editingTask) {
+      setEditingTask(null)
+      if (removeExistingFile) setRemoveExistingFile(false)
+    }
   }, [isOpen])
+
+  const [previewUrl, setPreviewUrl] = useState('')
+  const selectedFile = useWatch({ control, name: 'file' })
+
+  useEffect(() => {
+    if (selectedFile) {
+      setRemoveExistingFile(false)
+      setServerErrors({ file: '' })
+
+      const objectUrl = URL.createObjectURL(selectedFile)
+      setPreviewUrl(objectUrl)
+
+      return () => URL.revokeObjectURL(objectUrl)
+    } else setPreviewUrl('')
+  }, [selectedFile])
+
+  const currentFileUrl = selectedFile
+    ? previewUrl
+    : removeExistingFile
+      ? ''
+      : editingTask?.file
+
+  const showDeleteFile =
+    !!editingTask && !!editingTask.file && !selectedFile && !removeExistingFile
 
   return (
     <Fragment>
@@ -117,7 +185,11 @@ export default function TaskModal() {
           </ModalHeader>
           <ModalBody>
             {isInitialized && (
-              <Form id='task-form' onSubmit={handleSubmit(onSubmit)}>
+              <Form
+                id='task-form'
+                validationErrors={serverErrors}
+                onSubmit={handleSubmit(onSubmit)}
+              >
                 <Controller
                   name='name'
                   control={control}
@@ -179,9 +251,9 @@ export default function TaskModal() {
                       errorMessage={error?.message}
                       selectedKeys={field.value ? [field.value] : []}
                     >
-                      <SelectItem key='low'>Низький</SelectItem>
-                      <SelectItem key='medium'>Середній</SelectItem>
-                      <SelectItem key='high'>Високий</SelectItem>
+                      {PRIORITY.map(({ key, label }) => (
+                        <SelectItem key={key}>{label}</SelectItem>
+                      ))}
                     </Select>
                   )}
                 />
@@ -199,13 +271,69 @@ export default function TaskModal() {
                         if (validationDetails.valueMissing)
                           return "Термін обов'язковий"
                         else if (validationDetails.rangeOverflow)
-                          return 'Термін має бути раніше.'
+                          return 'Термін має бути раніше'
                         else if (validationDetails.rangeUnderflow)
-                          return 'Термін має бути пізніше.'
+                          return 'Термін має бути пізніше'
                       }}
                       classNames={{
                         input: 'selection:text-primary/75'
                       }}
+                    />
+                  )}
+                />
+                <Controller
+                  name='file'
+                  control={control}
+                  rules={{
+                    validate: (file?: File) => {
+                      if (file) {
+                        const allowedTypes = [
+                          'text/html',
+                          'image/png',
+                          'image/gif',
+                          'image/jpeg',
+                          'image/webp',
+                          'text/plain',
+                          'application/pdf'
+                        ]
+                        if (!allowedTypes.includes(file.type))
+                          return 'Недійсний тип файлу'
+                        const maxSize = 10 * 1024 * 1024
+                        if (file.size > maxSize)
+                          return 'Файл занадто великий (макс. 10 МБ)'
+                      }
+                    }
+                  }}
+                  render={({ field, fieldState: { error } }) => (
+                    <Input
+                      type='file'
+                      label='Файл (опціонально)'
+                      accept='.html, .png, .gif, .jpg, .jpeg, .webp, .txt, .pdf'
+                      isInvalid={!!error || !!serverErrors.file}
+                      errorMessage={error?.message ?? serverErrors.file}
+                      onChange={event =>
+                        field.onChange(event.target.files?.[0])
+                      }
+                      endContent={
+                        <div className='flex items-center gap-2'>
+                          <File file={currentFileUrl} isFileInput />
+                          {showDeleteFile && (
+                            <Button
+                              size='sm'
+                              isIconOnly
+                              radius='full'
+                              color='danger'
+                              aria-label='Delete file'
+                              onPress={() => setRemoveExistingFile(true)}
+                            >
+                              <LuTrash
+                                size={20}
+                                className='text-white dark:text-black'
+                              />
+                            </Button>
+                          )}
+                        </div>
+                      }
                     />
                   )}
                 />
@@ -220,9 +348,10 @@ export default function TaskModal() {
               type='submit'
               form='task-form'
               color='primary'
+              isLoading={isPending}
               className='text-secondary font-medium'
             >
-              Підтвердити
+              {isPending ? 'Підтвердження...' : 'Підтвердити'}
             </Button>
           </ModalFooter>
         </ModalContent>

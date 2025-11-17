@@ -12,4 +12,5 @@ export interface Task {
   priority: 'low' | 'medium' | 'high'
   term: string
   column: Column['id']
+  file?: string
 }

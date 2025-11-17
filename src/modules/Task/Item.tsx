@@ -2,13 +2,15 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Button, ScrollShadow } from '@heroui/react'
 import clsx from 'clsx'
+import { useEffect, useRef, useState } from 'react'
 import { BiSolidEdit } from 'react-icons/bi'
 import { LuTrash } from 'react-icons/lu'
 
-import { getLocalizedTaskTerm, getTaskPriorityText } from '@/utils/task'
+import { getLocalizedTaskTerm } from '@/utils/task'
 
 import type { Task } from '@/types/board'
 
+import File from '@/ui/file/File'
 import Text from '@/ui/text/Text'
 
 interface ItemProps {
@@ -36,6 +38,24 @@ export default function Item({ task, className, onEdit, onDelete }: ItemProps) {
     opacity: isDragging ? 0.5 : 1
   }
 
+  const timeoutRef = useRef<NodeJS.Timeout>()
+  const [isDeletePending, setIsDeletePending] = useState(false)
+
+  const handleDeleteClick = () => {
+    if (isDeletePending) {
+      onDelete()
+      setIsDeletePending(false)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    } else {
+      setIsDeletePending(true)
+      timeoutRef.current = setTimeout(() => setIsDeletePending(false), 2000)
+    }
+  }
+
+  useEffect(() => {
+    return () => timeoutRef.current && clearTimeout(timeoutRef.current)
+  }, [])
+
   return (
     <div
       style={style}
@@ -59,25 +79,26 @@ export default function Item({ task, className, onEdit, onDelete }: ItemProps) {
           <Text weight={500} selectable={false} nowrap>
             {task.name}
           </Text>
-          <ScrollShadow className='h-15' hideScrollBar>
+          <ScrollShadow className='h-20' hideScrollBar>
             <Text size='small' selectable={false}>
               {task.description}
             </Text>
           </ScrollShadow>
-          <Text selectable={false} nowrap>
-            Пріоритет: {getTaskPriorityText(task.priority)}
-          </Text>
-          <Text selectable={false} nowrap>
-            Термін: {getLocalizedTaskTerm(task.term)}
+          <Text weight={500} selectable={false} nowrap>
+            Виконати до {getLocalizedTaskTerm(task.term)}
           </Text>
         </div>
         <div className='flex h-full flex-col justify-between'>
+          <File
+            file={task.file}
+            className='transition-transform-opacity h-9.5 w-9.5 min-w-auto'
+          />
           <Button
             isIconOnly
             radius='full'
             color='primary'
             aria-label='Edit task'
-            className='transition-transform-opacity'
+            className='transition-transform-opacity h-9.5 w-9.5 min-w-auto'
             onPress={onEdit}
           >
             <BiSolidEdit size={20} className='text-white dark:text-black' />
@@ -87,10 +108,15 @@ export default function Item({ task, className, onEdit, onDelete }: ItemProps) {
             radius='full'
             color='primary'
             aria-label='Delete task'
-            className='transition-transform-opacity'
-            onPress={onDelete}
+            className='transition-transform-opacity h-9.5 w-9.5 min-w-auto'
+            onPress={handleDeleteClick}
           >
-            <LuTrash size={20} className='text-white dark:text-black' />
+            <LuTrash
+              size={20}
+              className={clsx('text-white dark:text-black', {
+                'text-danger-300!': isDeletePending
+              })}
+            />
           </Button>
         </div>
       </div>

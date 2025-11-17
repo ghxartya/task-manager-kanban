@@ -16,6 +16,7 @@
     "^@/providers(/.*)?$",
     "^@/services(/.*)?$",
     "^@/modules(/.*)?$",
+    "^@/helpers(/.*)?$",
     "^@/assets(/.*)?$",
     "^@/consts(/.*)?$",
     "^@/config(/.*)?$",
