@@ -1,7 +1,7 @@
 import { Fragment } from 'react'
 
 import Board from '@/modules/Kanban/Board'
-import TaskModal from '@/modules/Modal/TaskModal'
+import TaskModal from '@/modules/Modal/Task'
 
 import Footer from '@/layout/footer/Footer'
 import Header from '@/layout/header/Header'

@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Button, ScrollShadow } from '@heroui/react'
+import { Avatar, Button, ScrollShadow } from '@heroui/react'
 import clsx from 'clsx'
 import { useEffect, useRef, useState } from 'react'
 import { BiSolidEdit } from 'react-icons/bi'
@@ -63,7 +63,7 @@ export default function Item({ task, className, onEdit, onDelete }: ItemProps) {
       {...attributes}
       ref={setNodeRef}
       className={clsx(
-        'h-41 cursor-grab touch-none rounded-sm p-4 shadow-lg not-last:mb-4',
+        'h-45 cursor-grab touch-none rounded-sm p-4 shadow-lg not-last:mb-4',
         {
           'bg-red-300 dark:bg-red-900/50': task.priority === 'high',
           'bg-green-200 dark:bg-green-900/50': task.priority === 'low',
@@ -75,30 +75,40 @@ export default function Item({ task, className, onEdit, onDelete }: ItemProps) {
       )}
     >
       <div className='flex h-full items-start justify-between'>
-        <div className='w-[calc(100%-3.75rem)]'>
-          <Text weight={500} selectable={false} nowrap>
-            {task.name}
-          </Text>
+        <div className='flex h-full w-[calc(100%-3.75rem)] flex-col justify-between'>
+          <div>
+            <div className='flex items-center gap-1.5'>
+              <Avatar
+                size='sm'
+                alt={task.executor.name}
+                src={task.executor.avatar}
+                className='h-6 w-6 selection:text-transparent'
+              />
+              <Text size='small' selectable={false} nowrap>
+                {task.executor.name}
+              </Text>
+            </div>
+            <Text weight={500} selectable={false} nowrap>
+              {task.name}
+            </Text>
+          </div>
           <ScrollShadow className='h-20' hideScrollBar>
             <Text size='small' selectable={false}>
               {task.description}
             </Text>
           </ScrollShadow>
-          <Text weight={500} selectable={false} nowrap>
+          <Text size='small' weight={500} selectable={false} nowrap>
             Виконати до {getLocalizedTaskTerm(task.term)}
           </Text>
         </div>
-        <div className='flex h-full flex-col justify-between'>
-          <File
-            file={task.file}
-            className='transition-transform-opacity h-9.5 w-9.5 min-w-auto'
-          />
+        <div className='flex h-full flex-col justify-evenly'>
+          <File file={task.file} className='transition-transform-opacity' />
           <Button
             isIconOnly
             radius='full'
             color='primary'
             aria-label='Edit task'
-            className='transition-transform-opacity h-9.5 w-9.5 min-w-auto'
+            className='transition-transform-opacity'
             onPress={onEdit}
           >
             <BiSolidEdit size={20} className='text-white dark:text-black' />
@@ -108,13 +118,13 @@ export default function Item({ task, className, onEdit, onDelete }: ItemProps) {
             radius='full'
             color='primary'
             aria-label='Delete task'
-            className='transition-transform-opacity h-9.5 w-9.5 min-w-auto'
+            className='transition-transform-opacity'
             onPress={handleDeleteClick}
           >
             <LuTrash
               size={20}
               className={clsx('text-white dark:text-black', {
-                'text-danger-300!': isDeletePending
+                'text-danger!': isDeletePending
               })}
             />
           </Button>

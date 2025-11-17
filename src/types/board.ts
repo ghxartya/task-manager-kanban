@@ -5,6 +5,13 @@ export interface Column {
   title: string
 }
 
+export interface Executor {
+  id: number
+  name: string
+  email: string
+  avatar: string
+}
+
 export interface Task {
   id: UniqueIdentifier
   name: string
@@ -12,5 +19,6 @@ export interface Task {
   priority: 'low' | 'medium' | 'high'
   term: string
   column: Column['id']
+  executor: Executor
   file?: string
 }

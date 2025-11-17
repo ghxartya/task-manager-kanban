@@ -38,6 +38,9 @@ import { normalizeWhitespace } from '@/utils/normalize'
 import type { Task } from '@/types/board'
 
 import File from '@/ui/file/File'
+import Text from '@/ui/text/Text'
+
+import ExecutorModal from './Executor'
 
 type FormTask = Omit<Task, 'id'>
 
@@ -50,7 +53,7 @@ export default function TaskModal() {
   const { editingTask, tasks, addTask, updateTask, setEditingTask } = useStore()
   const { isOpen, onOpenChange, onClose, onOpen } = useDisclosure()
 
-  const { reset, control, handleSubmit } = useForm<FormData>({
+  const { reset, watch, control, setValue, handleSubmit } = useForm<FormData>({
     mode: 'all'
   })
 
@@ -97,14 +100,16 @@ export default function TaskModal() {
   useEffect(() => {
     if (isOpen) {
       if (editingTask) {
-        const { name, description, priority, term, column } = editingTask
+        const { name, description, priority, term, column, executor } =
+          editingTask
 
         reset({
           name,
           description,
           priority,
           term: parseZonedDateTime(term),
-          column
+          column,
+          executor
         })
       } else {
         const term = now('Europe/Kyiv').add({ weeks: 1 })
@@ -114,7 +119,12 @@ export default function TaskModal() {
           description: '',
           priority: 'medium',
           term,
-          column: 'todo'
+          column: 'todo',
+          executor: {
+            id: undefined,
+            name: '',
+            avatar: ''
+          }
         })
       }
       setIsInitialized(true)
@@ -155,6 +165,13 @@ export default function TaskModal() {
 
   const showDeleteFile =
     !!editingTask && !!editingTask.file && !selectedFile && !removeExistingFile
+
+  const {
+    isOpen: isExecutorModalOpen,
+    onOpen: onOpenExecutorModal,
+    onClose: onCloseExecutorModal,
+    onOpenChange: onExecutorModalOpenChange
+  } = useDisclosure()
 
   return (
     <Fragment>
@@ -246,14 +263,15 @@ export default function TaskModal() {
                     <Select
                       {...field}
                       isRequired
+                      items={PRIORITY}
                       label='Пріорітет'
                       isInvalid={!!error}
                       errorMessage={error?.message}
                       selectedKeys={field.value ? [field.value] : []}
                     >
-                      {PRIORITY.map(({ key, label }) => (
+                      {({ key, label }) => (
                         <SelectItem key={key}>{label}</SelectItem>
-                      ))}
+                      )}
                     </Select>
                   )}
                 />
@@ -336,6 +354,56 @@ export default function TaskModal() {
                       }
                     />
                   )}
+                />
+                <Controller
+                  name='executor.id'
+                  control={control}
+                  rules={{ required: 'Будь ласка, оберіть виконавця' }}
+                  render={({ field, fieldState: { error } }) => (
+                    <div className='flex w-full flex-col gap-1'>
+                      <input
+                        {...field}
+                        type='hidden'
+                        value={field.value ?? ''}
+                      />
+                      <Button
+                        fullWidth
+                        radius='lg'
+                        variant='flat'
+                        color='primary'
+                        onPress={onOpenExecutorModal}
+                      >
+                        {field.value ? 'Змінити' : 'Обрати'} виконавця
+                      </Button>
+                      {error && (
+                        <Text size='tiny' color='danger' center>
+                          {error.message}
+                        </Text>
+                      )}
+                    </div>
+                  )}
+                />
+                <ExecutorModal
+                  isOpen={isExecutorModalOpen}
+                  executor={watch('executor.id')}
+                  onSelect={
+                    executor => {
+                      setValue('executor', executor, { shouldValidate: true })
+                      onCloseExecutorModal()
+                    }
+                    /* Коментар
+                     * Пояснення підходу:
+                     * Nested modal повертає значення через callback,
+                     * і ми зберігаємо його у react-hook-form.
+                     *
+                     * Такий підхід:
+                     * - уникає побічних ефектів глобального стану
+                     * - дозволяє тримати всю форму в RHF
+                     * - дуже передбачуваний
+                     */
+                  }
+                  onClose={onCloseExecutorModal}
+                  onOpenChange={onExecutorModalOpenChange}
                 />
               </Form>
             )}
